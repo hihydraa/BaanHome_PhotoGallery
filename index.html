@@ -107,27 +107,31 @@
   <!-- เฟรม footer ด้านล่าง -->
   <div class="footer-frame"></div>
 
- <script>
+<script>
   // ========= ตั้งค่าที่นี่ =========
   const FOLDER_ID = "1iGzvVcRr2pMefz_ASm71LhndR912OdjV"; // โฟลเดอร์ Google Drive
-  const API_KEY   = "AIzaSyB4zHxdafBy0pg6sBkwYbpgNz_WLNpWJ-I";                  // <- API Key ของคุณ
+  const API_KEY   = "AIzaSyB4zHxdafBy0pg6sBkwYbpgNz_WLNpWJ-I";                  // <- ใส่ API Key ของคุณ
   const CHANGE_INTERVAL_MS = 5000;                        // เปลี่ยนรูปทุก 5 วิ
   // ================================
 
   const imgEl    = document.getElementById("slideshow-img");
   const statusEl = document.getElementById("status");
 
-  // รูปสำรองแบบ manual (อันนี้เราทดสอบแล้วเปิดได้จริง)
+  // ฟังก์ชันแปลง id -> URL แบบที่ใช้งานได้แน่นอน
+  function driveIdToUrl(id) {
+    return `https://drive.usercontent.google.com/download?id=${id}&export=view`;
+  }
+
+  // รูปสำรองแบบ manual (ใช้ id ที่เราทดสอบแล้ว)
   const fallbackImageUrls = [
-    "https://drive.google.com/uc?export=view&id=1JxN6zxM7jtCxSH-EqXZJc9m944eAqEgB"
-    // ถ้ามีรูปอื่นก็เพิ่มต่อท้ายได้เลย
+    driveIdToUrl("1JxN6zxM7jtCxSH-EqXZJc9m944eAqEgB")
+    // ถ้ามีรูปอื่นก็เพิ่มต่อท้ายเป็น driveIdToUrl("id อื่น")
   ];
 
-  let imageUrls  = [];  // รูปที่มาจาก Drive API
+  let imageUrls  = [];  // รูปจาก Drive API
   let lastIndex  = -1;
   let slideTimer = null;
 
-  // ถ้ารูปโหลดไม่สำเร็จ จะ log src ให้ดู
   imgEl.addEventListener("error", () => {
     console.error("❌ โหลดรูปไม่สำเร็จ:", imgEl.src);
   });
@@ -158,9 +162,7 @@
       console.log("📡 เรียก Drive API:", url);
 
       const res = await fetch(url);
-      if (!res.ok) {
-        throw new Error("HTTP " + res.status);
-      }
+      if (!res.ok) throw new Error("HTTP " + res.status);
 
       const data = await res.json();
       console.log("📦 data จาก Drive API:", data);
@@ -168,9 +170,9 @@
       if (!data.files || !data.files.length) {
         console.warn("⚠ ไม่พบไฟล์ภาพในโฟลเดอร์ ใช้ fallback แทน");
         statusEl.textContent = "ไม่พบรูปในโฟลเดอร์ ใช้ชุดรูปสำรองแสดงผล";
-        imageUrls = [];  // บังคับใช้ fallback
+        imageUrls = [];
       } else {
-        imageUrls = data.files.map(f => `https://drive.google.com/uc?export=view&id=${f.id}`);
+        imageUrls = data.files.map(f => driveIdToUrl(f.id));
         console.log("✅ imageUrls จาก Drive:", imageUrls);
         statusEl.textContent = `พบรูปภาพ ${imageUrls.length} รูป • แสดงแบบสุ่มทุก 5 วินาที`;
       }
@@ -178,10 +180,9 @@
     } catch (err) {
       console.error("🔥 Error ตอนโหลดจาก Drive:", err);
       statusEl.textContent = "เกิดข้อผิดพลาดในการโหลดจาก Drive • ใช้ชุดรูปสำรองแทน";
-      imageUrls = []; // บังคับใช้ fallback
+      imageUrls = [];
     }
 
-    // เริ่มสไลด์ (ใช้ imageUrls ถ้ามี, ถ้าไม่มีจะ fallback อัตโนมัติ)
     showRandomImage();
     if (slideTimer) clearInterval(slideTimer);
     slideTimer = setInterval(showRandomImage, CHANGE_INTERVAL_MS);
@@ -192,6 +193,7 @@
     loadImagesFromDrive();
   });
 </script>
+
 
 </body>
 </html>
