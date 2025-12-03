@@ -94,8 +94,14 @@
 <body>
   <div class="main">
     <div class="slide-wrapper">
-      <img id="slideshow-img" src="" alt="กำลังโหลดรูปภาพ..." />
-    </div>
+  <iframe
+    src="https://script.google.com/macros/s/AKfycbyK2cmfK2FM0rxnc1m_gCE8gLtprx8LBmmPq3x15l5U9Bxls0hqjcOpOUp9o-C8FbCF2A/exec"
+    style="border:0; width:100%; height:100%; border-radius:24px; overflow:hidden;"
+    allowfullscreen
+    loading="lazy">
+  </iframe>
+</div>
+
 
     <div class="caption">
       คอนเสิร์ตการกุศล เพื่อโรงพยาบาลยางตลาด @สวนอาหาร บ้านโฮม รีสอร์ท &amp; พูลวิลล่า
@@ -107,92 +113,7 @@
   <!-- เฟรม footer ด้านล่าง -->
   <div class="footer-frame"></div>
 
-<script>
-  // ========= ตั้งค่าที่นี่ =========
-  const FOLDER_ID = "1iGzvVcRr2pMefz_ASm71LhndR912OdjV"; // โฟลเดอร์ Google Drive
-  const API_KEY   = "AIzaSyB4zHxdafBy0pg6sBkwYbpgNz_WLNpWJ-I";                  // <- ใส่ API Key ของคุณ
-  const CHANGE_INTERVAL_MS = 5000;                        // เปลี่ยนรูปทุก 5 วิ
-  // ================================
 
-  const imgEl    = document.getElementById("slideshow-img");
-  const statusEl = document.getElementById("status");
-
-  // ฟังก์ชันแปลง id -> URL แบบที่ใช้งานได้แน่นอน
-  function driveIdToUrl(id) {
-    return `https://drive.usercontent.google.com/download?id=${id}&export=view`;
-  }
-
-  // รูปสำรองแบบ manual (ใช้ id ที่เราทดสอบแล้ว)
-  const fallbackImageUrls = [
-    driveIdToUrl("1JxN6zxM7jtCxSH-EqXZJc9m944eAqEgB")
-    // ถ้ามีรูปอื่นก็เพิ่มต่อท้ายเป็น driveIdToUrl("id อื่น")
-  ];
-
-  let imageUrls  = [];  // รูปจาก Drive API
-  let lastIndex  = -1;
-  let slideTimer = null;
-
-  imgEl.addEventListener("error", () => {
-    console.error("❌ โหลดรูปไม่สำเร็จ:", imgEl.src);
-  });
-
-  function showRandomImage() {
-    const list = imageUrls.length ? imageUrls : fallbackImageUrls;
-    if (!list.length) return;
-
-    let idx;
-    do {
-      idx = Math.floor(Math.random() * list.length);
-    } while (list.length > 1 && idx === lastIndex);
-
-    lastIndex = idx;
-    const url = list[idx];
-    console.log("👉 แสดงรูป:", url);
-    imgEl.src = url;
-  }
-
-  async function loadImagesFromDrive() {
-    try {
-      const q   = `'${FOLDER_ID}' in parents and mimeType contains 'image/' and trashed = false`;
-      const url = `https://www.googleapis.com/drive/v3/files` +
-                  `?q=${encodeURIComponent(q)}` +
-                  `&fields=files(id,name)` +
-                  `&key=${API_KEY}`;
-
-      console.log("📡 เรียก Drive API:", url);
-
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("HTTP " + res.status);
-
-      const data = await res.json();
-      console.log("📦 data จาก Drive API:", data);
-
-      if (!data.files || !data.files.length) {
-        console.warn("⚠ ไม่พบไฟล์ภาพในโฟลเดอร์ ใช้ fallback แทน");
-        statusEl.textContent = "ไม่พบรูปในโฟลเดอร์ ใช้ชุดรูปสำรองแสดงผล";
-        imageUrls = [];
-      } else {
-        imageUrls = data.files.map(f => driveIdToUrl(f.id));
-        console.log("✅ imageUrls จาก Drive:", imageUrls);
-        statusEl.textContent = `พบรูปภาพ ${imageUrls.length} รูป • แสดงแบบสุ่มทุก 5 วินาที`;
-      }
-
-    } catch (err) {
-      console.error("🔥 Error ตอนโหลดจาก Drive:", err);
-      statusEl.textContent = "เกิดข้อผิดพลาดในการโหลดจาก Drive • ใช้ชุดรูปสำรองแทน";
-      imageUrls = [];
-    }
-
-    showRandomImage();
-    if (slideTimer) clearInterval(slideTimer);
-    slideTimer = setInterval(showRandomImage, CHANGE_INTERVAL_MS);
-  }
-
-  window.addEventListener("load", () => {
-    console.log("🚀 เริ่มโหลดรูปจาก Drive...");
-    loadImagesFromDrive();
-  });
-</script>
 
 
 </body>
