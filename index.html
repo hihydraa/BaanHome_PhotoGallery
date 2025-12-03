@@ -152,6 +152,12 @@
         // แปลง id -> URL สำหรับ <img>
         imageUrls = data.files.map(f => `https://drive.google.com/uc?export=view&id=${f.id}`);
 
+  
+        
+        // ⭐ เพิ่มบรรทัดนี้เพื่อ debug
+        console.log("imageUrls:", imageUrls);
+
+
         statusEl.textContent = `พบรูปภาพ ${imageUrls.length} รูป • กำลังแสดงแบบสุ่มทุก 5 วินาที`;
         showRandomImage();
 
