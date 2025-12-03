@@ -171,98 +171,113 @@
     <p class="message" id="message"></p>
   </div>
 
-  <script>
-    // >>> เปลี่ยนเป็น URL Web App ของ Apps Script ที่สร้างไว้ <<<
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzKr-uccY218AxLFtWzIEojIQFL_MunfSSyCN1yEx24Plpzk3gk8H1I_6SLwq6ISf54gg/exec';
 
-    const DISPLAY_MS = 5000;        // 5 วินาทีต่อรูป
-    const REFRESH_LIST_MS = 60000;  // รีเฟรชลิสต์รูปจาก Drive ทุก 60 วินาที
+<script>
+  // URL Web App ของ Apps Script (ลงท้ายด้วย /exec)
+  const API_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';
 
-    let images = [];
-    let currentIndex = 0;
-    let slideTimer = null;
+  const DISPLAY_MS = 5000;        // 5 วิ/รูป
+  const REFRESH_LIST_MS = 60000;  // รีเฟรชลิสต์จาก Drive ทุก 60 วิ
 
-    const imgEl = document.getElementById('slide-image');
-    const captionEl = document.getElementById('caption');
-    const counterEl = document.getElementById('counter');
-    const messageEl = document.getElementById('message');
-    const frameEl = document.getElementById('frame');
+  let images = [];
+  let currentIndex = 0;
+  let slideTimer = null;
+  let firstLoaded = false;
 
-    function shuffle(array) {
-      // Fisher-Yates shuffle
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
+  const imgEl = document.getElementById('slide-image');
+  const captionEl = document.getElementById('caption');
+  const counterEl = document.getElementById('counter');
+  const messageEl = document.getElementById('message');
+  const frameEl = document.getElementById('frame');
+
+  function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+  }
+
+  // ฟังก์ชัน callback ที่ Apps Script จะเรียก (ชื่อเดียวกับ query ?callback=)
+  function handleImagesFromAppsScript(data) {
+    try {
+      const newImages = data && data.images ? data.images : [];
+      if (!newImages.length) {
+        messageEl.textContent = 'ยังไม่พบรูปในโฟลเดอร์บน Google Drive';
+        return;
       }
+
+      images = newImages;
+      shuffle(images);
+      currentIndex = 0;
+      messageEl.textContent = '';
+
+      if (!firstLoaded) {
+        firstLoaded = true;
+        startSlideshow();
+      } else {
+        // ถ้าโหลดรอบใหม่ (มีรูปอัปเดต) ก็รีเซ็ต counter ให้โชว์เซ็ตใหม่ต่อเนื่อง
+        counterEl.textContent = (currentIndex + 1) + ' / ' + images.length;
+      }
+    } catch (err) {
+      console.error(err);
+      messageEl.textContent = 'เกิดข้อผิดพลาดในการอ่านข้อมูลรูปจาก Apps Script';
+    }
+  }
+
+  // ยิง script แบบ JSONP เพื่อดึงข้อมูลรูป
+  function requestImagesJSONP() {
+    const oldScript = document.getElementById('jsonp-loader');
+    if (oldScript) {
+      oldScript.remove();
     }
 
-    async function loadImages() {
-      try {
-        const res = await fetch(API_URL, { cache: 'no-store' });
-        if (!res.ok) throw new Error('HTTP status ' + res.status);
-        const data = await res.json();
+    const script = document.createElement('script');
+    script.id = 'jsonp-loader';
+    script.src = API_URL + '?callback=handleImagesFromAppsScript&ts=' + Date.now();
+    document.body.appendChild(script);
+  }
 
-        const newImages = (data && data.images) ? data.images : [];
+  function startSlideshow() {
+    if (!images.length) return;
 
-        if (!newImages.length) {
-          messageEl.textContent = 'ยังไม่พบรูปในโฟลเดอร์บน Google Drive';
-          return;
-        }
+    showCurrentImage();
 
-        images = newImages;
+    if (slideTimer) clearInterval(slideTimer);
+
+    slideTimer = setInterval(() => {
+      currentIndex++;
+      if (currentIndex >= images.length) {
         shuffle(images);
         currentIndex = 0;
-        messageEl.textContent = '';
-
-        startSlideshow();
-      } catch (err) {
-        console.error(err);
-        messageEl.textContent = 'โหลดรูปจาก Google Drive ไม่สำเร็จ กรุณาตรวจสอบ API_URL หรือสิทธิ์การเข้าถึง Web App';
       }
-    }
-
-    function startSlideshow() {
-      if (!images.length) return;
-
-      // แสดงรูปแรกทันที
       showCurrentImage();
+    }, DISPLAY_MS);
+  }
 
-      // เคลียร์ timer เก่า (กันซ้ำ)
-      if (slideTimer) clearInterval(slideTimer);
+  function showCurrentImage() {
+    if (!images.length) return;
 
-      // ตั้ง interval ทุก 5 วิ
-      slideTimer = setInterval(() => {
-        currentIndex++;
-        if (currentIndex >= images.length) {
-          // ครบรอบแล้ว reshuffle ใหม่ให้ random ลำดับอีกครั้ง
-          shuffle(images);
-          currentIndex = 0;
-        }
-        showCurrentImage();
-      }, DISPLAY_MS);
-    }
+    const img = images[currentIndex];
+    frameEl.classList.add('loading');
 
-    function showCurrentImage() {
-      if (!images.length) return;
+    imgEl.src = img.url;
+    imgEl.onload = () => {
+      frameEl.classList.remove('loading');
+    };
 
-      const img = images[currentIndex];
-      frameEl.classList.add('loading');
+    captionEl.textContent = img.name || 'Untitled';
+    counterEl.textContent = (currentIndex + 1) + ' / ' + images.length;
+  }
 
-      // อัปเดตรูป
-      imgEl.src = img.url;
-      imgEl.onload = () => {
-        frameEl.classList.remove('loading');
-      };
+  window.addEventListener('load', () => {
+    // โหลดครั้งแรก
+    requestImagesJSONP();
+    // รีเฟรชลิสต์เรื่อย ๆ
+    setInterval(requestImagesJSONP, REFRESH_LIST_MS);
+  });
+</script>
 
-      captionEl.textContent = img.name || 'Untitled';
-      counterEl.textContent = (currentIndex + 1) + ' / ' + images.length;
-    }
 
-    window.addEventListener('load', () => {
-      loadImages();
-      // รีเฟรชลิสต์รูปทุก REFRESH_LIST_MS ms (เช่น มีคนอัปโหลดรูปใหม่เข้ามา)
-      setInterval(loadImages, REFRESH_LIST_MS);
-    });
-  </script>
+  
 </body>
 </html>
