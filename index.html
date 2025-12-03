@@ -85,9 +85,10 @@
       transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
     }
 
+    /* ไม่ซ่อนรูปเวลา loading อีกต่อไป */
     .frame.loading img {
-      opacity: 0;
-      transform: scale(1.02);
+      opacity: 1;
+      transform: scale(1);
     }
 
     .overlay {
@@ -171,113 +172,119 @@
     <p class="message" id="message"></p>
   </div>
 
+  <script>
+    // URL Web App ของ Apps Script (ลงท้ายด้วย /exec)
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzA3uy-PN3nxnBAVsEjKgJVT4fu0Hl60crwsPeZSwgpPxwPSYxNJ9qbPDS1vaVCE8zrew/exec';
 
-<script>
-  // URL Web App ของ Apps Script (ลงท้ายด้วย /exec)
-  const API_URL = 'https://script.google.com/macros/s/AKfycbzA3uy-PN3nxnBAVsEjKgJVT4fu0Hl60crwsPeZSwgpPxwPSYxNJ9qbPDS1vaVCE8zrew/exec';
+    const DISPLAY_MS = 5000;        // 5 วิ/รูป
+    const REFRESH_LIST_MS = 60000;  // รีเฟรชลิสต์จาก Drive ทุก 60 วิ
 
-  const DISPLAY_MS = 5000;        // 5 วิ/รูป
-  const REFRESH_LIST_MS = 60000;  // รีเฟรชลิสต์จาก Drive ทุก 60 วิ
+    let images = [];
+    let currentIndex = 0;
+    let slideTimer = null;
+    let firstLoaded = false;
 
-  let images = [];
-  let currentIndex = 0;
-  let slideTimer = null;
-  let firstLoaded = false;
+    const imgEl = document.getElementById('slide-image');
+    const captionEl = document.getElementById('caption');
+    const counterEl = document.getElementById('counter');
+    const messageEl = document.getElementById('message');
+    const frameEl = document.getElementById('frame');
 
-  const imgEl = document.getElementById('slide-image');
-  const captionEl = document.getElementById('caption');
-  const counterEl = document.getElementById('counter');
-  const messageEl = document.getElementById('message');
-  const frameEl = document.getElementById('frame');
-
-  function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-  }
-
-  // ฟังก์ชัน callback ที่ Apps Script จะเรียก (ชื่อเดียวกับ query ?callback=)
-  function handleImagesFromAppsScript(data) {
-    try {
-      const newImages = data && data.images ? data.images : [];
-      if (!newImages.length) {
-        messageEl.textContent = 'ยังไม่พบรูปในโฟลเดอร์บน Google Drive';
-        return;
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
       }
-
-      images = newImages;
-      shuffle(images);
-      currentIndex = 0;
-      messageEl.textContent = '';
-
-      if (!firstLoaded) {
-        firstLoaded = true;
-        startSlideshow();
-      } else {
-        // ถ้าโหลดรอบใหม่ (มีรูปอัปเดต) ก็รีเซ็ต counter ให้โชว์เซ็ตใหม่ต่อเนื่อง
-        counterEl.textContent = (currentIndex + 1) + ' / ' + images.length;
-      }
-    } catch (err) {
-      console.error(err);
-      messageEl.textContent = 'เกิดข้อผิดพลาดในการอ่านข้อมูลรูปจาก Apps Script';
-    }
-  }
-
-  // ยิง script แบบ JSONP เพื่อดึงข้อมูลรูป
-  function requestImagesJSONP() {
-    const oldScript = document.getElementById('jsonp-loader');
-    if (oldScript) {
-      oldScript.remove();
     }
 
-    const script = document.createElement('script');
-    script.id = 'jsonp-loader';
-    script.src = API_URL + '?callback=handleImagesFromAppsScript&ts=' + Date.now();
-    document.body.appendChild(script);
-  }
+    // ฟังก์ชัน callback ที่ Apps Script จะเรียก (ชื่อเดียวกับ query ?callback=)
+    function handleImagesFromAppsScript(data) {
+      try {
+        console.log('data from Apps Script:', data);
 
-  function startSlideshow() {
-    if (!images.length) return;
+        const newImages = data && data.images ? data.images : [];
+        if (!newImages.length) {
+          messageEl.textContent = 'ยังไม่พบรูปในโฟลเดอร์บน Google Drive';
+          return;
+        }
 
-    showCurrentImage();
-
-    if (slideTimer) clearInterval(slideTimer);
-
-    slideTimer = setInterval(() => {
-      currentIndex++;
-      if (currentIndex >= images.length) {
+        images = newImages;
         shuffle(images);
         currentIndex = 0;
+        messageEl.textContent = '';
+
+        if (!firstLoaded) {
+          firstLoaded = true;
+          startSlideshow();
+        } else {
+          counterEl.textContent = (currentIndex + 1) + ' / ' + images.length;
+        }
+      } catch (err) {
+        console.error(err);
+        messageEl.textContent = 'เกิดข้อผิดพลาดในการอ่านข้อมูลรูปจาก Apps Script';
       }
+    }
+
+    // ยิง script แบบ JSONP เพื่อดึงข้อมูลรูป
+    function requestImagesJSONP() {
+      const oldScript = document.getElementById('jsonp-loader');
+      if (oldScript) {
+        oldScript.remove();
+      }
+
+      const script = document.createElement('script');
+      script.id = 'jsonp-loader';
+      script.src = API_URL + '?callback=handleImagesFromAppsScript&ts=' + Date.now();
+      document.body.appendChild(script);
+    }
+
+    function startSlideshow() {
+      if (!images.length) return;
+
       showCurrentImage();
-    }, DISPLAY_MS);
-  }
 
-  function showCurrentImage() {
-    if (!images.length) return;
+      if (slideTimer) clearInterval(slideTimer);
 
-    const img = images[currentIndex];
-    frameEl.classList.add('loading');
+      slideTimer = setInterval(() => {
+        currentIndex++;
+        if (currentIndex >= images.length) {
+          shuffle(images);
+          currentIndex = 0;
+        }
+        showCurrentImage();
+      }, DISPLAY_MS);
+    }
 
-    imgEl.src = img.url;
-    imgEl.onload = () => {
-      frameEl.classList.remove('loading');
-    };
+    function showCurrentImage() {
+      if (!images.length) return;
 
-    captionEl.textContent = img.name || 'Untitled';
-    counterEl.textContent = (currentIndex + 1) + ' / ' + images.length;
-  }
+      const img = images[currentIndex];
+      frameEl.classList.add('loading');
 
-  window.addEventListener('load', () => {
-    // โหลดครั้งแรก
-    requestImagesJSONP();
-    // รีเฟรชลิสต์เรื่อย ๆ
-    setInterval(requestImagesJSONP, REFRESH_LIST_MS);
-  });
-</script>
+      // ตั้ง handler ก่อนเซ็ต src
+      imgEl.onload = () => {
+        frameEl.classList.remove('loading');
+        messageEl.textContent = '';
+      };
 
+      imgEl.onerror = () => {
+        frameEl.classList.remove('loading');
+        messageEl.textContent = 'โหลดรูปไม่สำเร็จ กรุณาตรวจสอบลิงก์หรือการแชร์ไฟล์ใน Google Drive';
+        console.error('Error loading image:', img.url);
+      };
 
-  
+      imgEl.src = img.url;
+
+      captionEl.textContent = img.name || 'Untitled';
+      counterEl.textContent = (currentIndex + 1) + ' / ' + images.length;
+    }
+
+    window.addEventListener('load', () => {
+      // โหลดครั้งแรก
+      requestImagesJSONP();
+      // รีเฟรชลิสต์เรื่อย ๆ
+      setInterval(requestImagesJSONP, REFRESH_LIST_MS);
+    });
+  </script>
 </body>
 </html>
