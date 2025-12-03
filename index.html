@@ -17,113 +17,114 @@
       height: 100vh;
       width: 100vw;
       overflow: hidden;
-      /* ใช้ธีมที่ให้มาเป็นพื้นหลังเต็มจอ */
-      background: url("frame-banner.png") no-repeat center center fixed;
-      background-size: cover;
+      background: radial-gradient(circle at top, #7f1d1d 0%, #450a0a 40%, #111827 100%);
+      color: #fff;
       display: flex;
-      justify-content: center;
-      align-items: center;
+      flex-direction: column;
     }
 
-    .overlay {
-      position: relative;
-      width: 90vw;
-      height: 80vh;
-      max-width: 1600px;
-      max-height: 800px;
+    /* ส่วนเนื้อหาหลัก */
+    .main {
+      flex: 1;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      padding: 24px;
-      /* ทำให้ภาพโชว์ลอยอยู่เหนือเฟรม */
-      background: rgba(0, 0, 0, 0.18);
-      border-radius: 24px;
-      backdrop-filter: blur(4px);
+      padding: 16px;
+      gap: 16px;
     }
 
     .slide-wrapper {
       position: relative;
-      width: 100%;
-      height: 100%;
-      max-height: 600px;
+      width: min(90vw, 1400px);
+      height: min(65vh, 650px);
       display: flex;
       justify-content: center;
       align-items: center;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 24px;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+      padding: 12px;
     }
 
     #slideshow-img {
       max-width: 100%;
       max-height: 100%;
-      border-radius: 24px;
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+      border-radius: 18px;
       object-fit: contain;
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.1);
     }
 
     .caption {
-      margin-top: 18px;
-      padding: 10px 18px;
+      margin-top: 8px;
+      padding: 8px 18px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.95);
       color: #b91c1c;
       font-weight: 700;
       font-size: clamp(14px, 2vw, 18px);
       text-align: center;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
       max-width: 90vw;
     }
 
+    /* footer ที่เป็น frame ด้านล่าง */
+    .footer-frame {
+      height: 110px; /* ปรับได้ */
+      width: 100%;
+      background: url("footer-frame.png") no-repeat center center;
+      background-size: cover;
+      flex-shrink: 0;
+    }
+
+    .loading {
+      opacity: 0.8;
+      font-size: 14px;
+      margin-top: 6px;
+    }
+
     @media (max-width: 768px) {
-      .overlay {
-        padding: 16px;
-        width: 95vw;
-        height: 75vh;
-      }
-      .caption {
-        white-space: normal;
+      .slide-wrapper {
+        height: 55vh;
       }
     }
   </style>
 </head>
 <body>
-  <div class="overlay">
+  <div class="main">
     <div class="slide-wrapper">
-      <img id="slideshow-img" src="" alt="รูปคอนเสิร์ตการกุศล" />
+      <img id="slideshow-img" src="" alt="กำลังโหลดรูปภาพ..." />
     </div>
 
-    <!-- ข้อความที่จะโชว์ใต้รูป ปรับแก้ตามที่ต้องการ -->
     <div class="caption">
       คอนเสิร์ตการกุศล เพื่อโรงพยาบาลยางตลาด @สวนอาหาร บ้านโฮม รีสอร์ท &amp; พูลวิลล่า
     </div>
+
+    <div id="status" class="loading">กำลังโหลดรูปภาพจาก Google Drive...</div>
   </div>
 
-  <script>
-    // ====== 1) ใส่ลิงก์รูปจาก Google Drive ที่นี่ ======
-    // วิธีได้ FILE_ID:
-    // ลิงก์แบบปกติ: https://drive.google.com/file/d/FILE_ID/view?usp=sharing
-    // ให้เอาเฉพาะส่วน FILE_ID มาใส่
-    const imageUrls = [
-      "https://drive.google.com/uc?export=view&id=IMAGE_ID_1",
-      "https://drive.google.com/uc?export=view&id=IMAGE_ID_2",
-      "https://drive.google.com/uc?export=view&id=IMAGE_ID_3",
-      "https://drive.google.com/uc?export=view&id=IMAGE_ID_4",
-      "https://drive.google.com/uc?export=view&id=IMAGE_ID_5"
-      // เพิ่มได้ไม่จำกัด
-    ];
+  <!-- เฟรม footer ด้านล่าง -->
+  <div class="footer-frame"></div>
 
-    // ====== 2) ฟังก์ชันสุ่มรูปทุก 5 วินาที ======
+  <script>
+    // ========= ตั้งค่าที่นี่ =========
+    const FOLDER_ID = "1iGzvVcRr2pMefz_ASm71LhndR912OdjV"; // โฟลเดอร์ที่คุณให้มา
+    const API_KEY   = "YOUR_API_KEY_HERE";                 // <- ใส่ Google API Key ของคุณ
+    const CHANGE_INTERVAL_MS = 5000; // เปลี่ยนรูปทุก 5 วินาที
+    // ================================
+
     const imgEl = document.getElementById("slideshow-img");
+    const statusEl = document.getElementById("status");
+
+    let imageUrls = [];
     let lastIndex = -1;
+    let slideTimer = null;
 
     function showRandomImage() {
-      if (imageUrls.length === 0) return;
+      if (!imageUrls.length) return;
 
       let idx;
-      // กันสุ่มตัวเดิมซ้ำติดกัน
       do {
         idx = Math.floor(Math.random() * imageUrls.length);
       } while (imageUrls.length > 1 && idx === lastIndex);
@@ -132,10 +133,38 @@
       imgEl.src = imageUrls[idx];
     }
 
-    // แสดงรูปแรกทันที
-    showRandomImage();
-    // เปลี่ยนรูปทุก 5000 ms (5 วินาที)
-    setInterval(showRandomImage, 5000);
+    async function loadImagesFromDrive() {
+      try {
+        const q = `'${FOLDER_ID}' in parents and mimeType contains 'image/' and trashed = false`;
+        const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)&key=${API_KEY}`;
+
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error("HTTP " + res.status);
+        }
+        const data = await res.json();
+
+        if (!data.files || !data.files.length) {
+          statusEl.textContent = "ไม่พบรูปภาพในโฟลเดอร์นี้ (หรือยังไม่ได้ตั้งค่าแชร์เป็น Anyone with the link)";
+          return;
+        }
+
+        // แปลง id -> URL สำหรับ <img>
+        imageUrls = data.files.map(f => `https://drive.google.com/uc?export=view&id=${f.id}`);
+
+        statusEl.textContent = `พบรูปภาพ ${imageUrls.length} รูป • กำลังแสดงแบบสุ่มทุก 5 วินาที`;
+        showRandomImage();
+
+        if (slideTimer) clearInterval(slideTimer);
+        slideTimer = setInterval(showRandomImage, CHANGE_INTERVAL_MS);
+
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "เกิดข้อผิดพลาดในการโหลดรูปจาก Google Drive (ดู console ใน DevTools)";
+      }
+    }
+
+    window.addEventListener("load", loadImagesFromDrive);
   </script>
 </body>
 </html>
